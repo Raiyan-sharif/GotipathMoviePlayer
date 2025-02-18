@@ -26,6 +26,7 @@ class VideoPlayerScreen extends StatefulWidget {
 class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   static const platform = MethodChannel('video_player_channel');
   bool isPlaying = false;
+  bool showControls = true;
   
   static const String videoUrl = 
     'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
@@ -39,29 +40,72 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       
       setState(() {
         isPlaying = result;
+        // Show controls briefly when state changes
+        showControls = true;
+        _autoHideControls();
       });
     } on PlatformException catch (e) {
       debugPrint("Failed to toggle play/pause: '${e.message}'.");
     }
   }
 
+  void _toggleControls() {
+    setState(() {
+      showControls = !showControls;
+      if (showControls) {
+        _autoHideControls();
+      }
+    });
+  }
+
+  void _autoHideControls() {
+    if (isPlaying) {
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted && isPlaying) {
+          setState(() {
+            showControls = false;
+          });
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Video Player'),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      backgroundColor: Colors.black,
+      body: GestureDetector(
+        onTap: _toggleControls,
+        child: Stack(
           children: [
-            const Text('Native Video Player'),
-            const SizedBox(height: 20),
-            IconButton(
-              icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
-              iconSize: 48,
-              onPressed: _togglePlayPause,
+            // Video container (this will be our native view)
+            const ColoredBox(
+              color: Colors.black,
+              child: Center(
+                child: AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: double.infinity,
+                  ),
+                ),
+              ),
             ),
+            // Controls overlay
+            if (showControls)
+              Container(
+                color: Colors.black26,
+                child: Center(
+                  child: IconButton(
+                    icon: Icon(
+                      isPlaying ? Icons.pause_circle : Icons.play_circle,
+                      color: Colors.white,
+                    ),
+                    iconSize: 64,
+                    onPressed: _togglePlayPause,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
